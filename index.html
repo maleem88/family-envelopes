@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Family Envelopes</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Envelopes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F5F3EF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151614" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #F5F3EF; --card: #FFFFFF; --line: #E6E2DA; --track: #ECE8E1;
+  --fg: #171717; --muted: #5F5E5A; --accent: #2F5D50; --accent-soft: #E9F0ED;
+  --warn: #B54708; --key: #FFFFFF; --primary: #171717; --on-primary: #FFFFFF;
+  --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151614; --card: #1E201D; --line: #30332D; --track: #2C2F29;
+    --fg: #F2F1EC; --muted: #AAA8A0; --accent: #7FB8A4; --accent-soft: #24352F;
+    --warn: #F0A060; --key: #22241F; --primary: #F2F1EC; --on-primary: #151614;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { max-width: 520px; margin: 0 auto; padding-block: 16px 40px; display: flex; flex-direction: column; gap: 20px; }
+
+/* Sign in */
+.signin { max-width: 400px; margin: 0 auto; padding-block: 12vh 40px; display: flex; flex-direction: column; gap: 16px; }
+.signin h1 { margin: 0; font-size: 32px; letter-spacing: -0.02em; }
+.signin p { margin: 0; color: var(--muted); line-height: 1.5; }
+.error { color: var(--warn); font-size: 14px; font-weight: 500; min-height: 20px; }
+
+.weekbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.weekbar .label { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.weekbar .label strong { font-size: 15px; font-weight: 600; }
+.weekbar .label span { font-size: 13px; color: var(--muted); }
+.navbtn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; cursor: pointer; }
+.navbtn:disabled { opacity: .35; cursor: default; }
+
+.summary { display: flex; flex-direction: column; gap: 6px; }
+.summary .big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.summary .big b { font-size: 44px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.summary .big span { font-size: 17px; font-weight: 600; color: var(--muted); }
+.summary .big b.over { color: var(--warn); }
+.summary p { margin: 0; font-size: 14px; color: var(--muted); }
+
+.bar { display: block; height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; }
+.bar > span { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+.bar.warn > span { background: var(--warn); }
+.bar.thick { height: 8px; margin-top: 8px; }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.card { display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; text-align: left; cursor: pointer; min-width: 0; }
+.card.wide { grid-column: span 2; }
+.card:active { transform: scale(.985); }
+.card .head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.icon { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex-shrink: 0; }
+.names { display: flex; flex-direction: column; min-width: 0; }
+.names b { font-size: 15px; font-weight: 600; }
+.names span { font-size: 12px; color: var(--muted); }
+.amt { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.amt b { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.amt b.over { color: var(--warn); }
+.amt span { font-size: 12px; color: var(--muted); }
+.last { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.empty { grid-column: span 2; padding: 28px 18px; text-align: center; background: var(--card); border: 1px dashed var(--line); border-radius: 18px; color: var(--muted); line-height: 1.5; }
+
+.section-title { margin: 4px 0 0; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.entries { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.entry { display: flex; align-items: center; gap: 12px; padding: 10px 8px 10px 14px; border-top: 1px solid var(--line); }
+.entry:first-child { border-top: none; }
+.entry .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.entry .main b { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry .main span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry .value { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.delbtn { min-width: 44px; height: 44px; border: none; background: transparent; border-radius: 12px; color: var(--muted); display: grid; place-items: center; cursor: pointer; padding: 0 6px; }
+.delbtn.confirm { color: var(--warn); font-size: 13px; font-weight: 600; }
+.entries .none { padding: 18px 14px; color: var(--muted); font-size: 14px; }
+
+.foot { display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.linkbtn { border: none; background: transparent; color: var(--accent); font-weight: 600; min-height: 44px; padding: 0 8px; cursor: pointer; }
+
+/* Add-spending sheet */
+.sheet { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: flex; justify-content: center; overflow-y: auto;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 8px); padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.sheet-inner { width: 100%; max-width: 480px; min-height: 100%; display: flex; flex-direction: column; gap: 14px; }
+.sheet-top { display: flex; align-items: center; justify-content: space-between; }
+.textbtn { height: 44px; min-width: 72px; padding: 0 4px; border: none; background: transparent; font-size: 17px; font-weight: 500; color: var(--accent); text-align: left; cursor: pointer; }
+.sheet-title { display: flex; flex-direction: column; align-items: center; }
+.sheet-title b { font-size: 17px; font-weight: 600; }
+.sheet-title span { font-size: 12px; color: var(--muted); }
+.spacer { min-width: 72px; }
+.display { flex: 1; min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.display .ctx { font-size: 14px; color: var(--muted); }
+.display .num { display: flex; align-items: baseline; gap: 8px; }
+.display .num b { font-size: clamp(48px, 16vw, 68px); font-weight: 700; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.display .num b.placeholder { color: var(--muted); opacity: .6; }
+.display .num span { font-size: 20px; font-weight: 600; color: var(--muted); }
+.display .after { font-size: 14px; color: var(--muted); min-height: 18px; }
+.display .after.over { color: var(--warn); font-weight: 600; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field input { height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--fg); font: inherit; font-size: 16px; width: 100%; }
+.keys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.key { height: 56px; border: 1px solid var(--line); border-radius: 14px; background: var(--key); font-size: 26px; font-weight: 500; display: grid; place-items: center; cursor: pointer; font-variant-numeric: tabular-nums; }
+.key:active { background: var(--track); }
+.primary { height: 56px; border: none; border-radius: 16px; background: var(--primary); color: var(--on-primary); font-size: 17px; font-weight: 600; cursor: pointer; width: 100%; }
+.primary:disabled { opacity: .35; cursor: default; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); z-index: 30;
+  max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 14px; background: var(--primary); color: var(--on-primary);
+  font-size: 14px; font-weight: 500; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+@media (prefers-reduced-motion: reduce) { .card:active { transform: none; } }
+</style>
+</head>
+<body>
+
+<!-- Sign in -->
+<form class="signin" id="signin" hidden novalidate>
+  <h1>Family Envelopes</h1>
+  <p>Sign in with the email and password set up for you.</p>
+  <div class="field">
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" inputmode="email" required>
+  </div>
+  <div class="field">
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+  </div>
+  <button class="primary" id="signin-btn" type="submit">Sign in</button>
+  <div class="error" id="signin-error" role="alert"></div>
+</form>
+
+<!-- Setup or access message -->
+<div class="signin" id="notice" hidden>
+  <h1>Family Envelopes</h1>
+  <p id="notice-text"></p>
+  <button class="primary" id="notice-signout" type="button" hidden>Sign out</button>
+</div>
+
+<!-- Dashboard -->
+<div class="app" id="main" hidden>
+  <div class="weekbar">
+    <button class="navbtn" id="prev-week" type="button" aria-label="Previous week">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div class="label"><strong id="week-name">This week</strong><span id="week-range"></span></div>
+    <button class="navbtn" id="next-week" type="button" aria-label="Next week" disabled>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+
+  <section class="summary" aria-label="Week summary">
+    <div class="big"><b id="total-left">0</b><span>EGP left</span></div>
+    <p id="total-sub">Loading…</p>
+    <div class="bar thick" id="total-bar"><span style="width:0%"></span></div>
+  </section>
+
+  <div class="grid" id="grid"><div class="empty">Loading your envelopes…</div></div>
+
+  <h2 class="section-title" id="entries-title">Spending this week</h2>
+  <div class="entries" id="entries"><div class="none">Loading…</div></div>
+
+  <div class="foot"><span id="signed-as"></span><button class="linkbtn" id="signout" type="button">Sign out</button></div>
+</div>
+
+<!-- Add spending -->
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-name" hidden>
+  <div class="sheet-inner">
+    <div class="sheet-top">
+      <button class="textbtn" id="cancel" type="button">Cancel</button>
+      <div class="sheet-title"><b id="sheet-name">Envelope</b><span id="sheet-ar"></span></div>
+      <span class="spacer" aria-hidden="true"></span>
+    </div>
+    <div class="display">
+      <span class="ctx" id="sheet-ctx"></span>
+      <div class="num"><b id="amount" class="placeholder" aria-live="polite">0</b><span>EGP</span></div>
+      <span class="after" id="after"></span>
+    </div>
+    <div class="field">
+      <label for="note">Note</label>
+      <input id="note" type="text" maxlength="120" placeholder="What was it for?" autocomplete="off">
+    </div>
+    <div class="keys" id="keys">
+      <button class="key" type="button" data-k="1">1</button>
+      <button class="key" type="button" data-k="2">2</button>
+      <button class="key" type="button" data-k="3">3</button>
+      <button class="key" type="button" data-k="4">4</button>
+      <button class="key" type="button" data-k="5">5</button>
+      <button class="key" type="button" data-k="6">6</button>
+      <button class="key" type="button" data-k="7">7</button>
+      <button class="key" type="button" data-k="8">8</button>
+      <button class="key" type="button" data-k="9">9</button>
+      <button class="key" type="button" data-k="." aria-label="Decimal point">.</button>
+      <button class="key" type="button" data-k="0">0</button>
+      <button class="key" type="button" data-k="del" aria-label="Delete">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5h11v14H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>
+      </button>
+    </div>
+    <button class="primary" id="save" type="button" disabled>Save</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+(function () {
+  var ICON = {
+    food: '<path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7.5c0-1 1-1.5 1-2.5M12 7.5c0-1 1-1.5 1-2.5M16 7.5c0-1 1-1.5 1-2.5"/>',
+    kids: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14a4 4 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01"/>',
+    fun: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+    car: '<path d="M4 16l1.5-5.2A2 2 0 0 1 7.4 9.3h9.2a2 2 0 0 1 1.9 1.5L20 16v2H4z"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="16.5" cy="18.5" r="1.5"/>',
+    health: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8.5v7M8.5 12h7"/>',
+    home: '<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/>',
+    bills: '<path d="M13 3L5 13h6l-1 8 8-10h-6z"/>',
+    emergency: '<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/>',
+    dot: '<circle cx="12" cy="12" r="4"/>',
+    trash: '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>'
+  };
+  var WIDE = { food: true, emergency: true };
+  var WEEK_STARTS_ON = 6; // Saturday
+
+  var $ = function (id) { return document.getElementById(id); };
+  var sb = null;
+  var myId = null, members = {}, envList = [], expenses = [];
+  var loadedFor = null, weekOffset = 0, weekLoaded = false, weekReq = 0, channel = null;
+  var sel = null, amount = '', saving = false, returnFocus = null;
+  var pendingDelete = null, pendingTimer = null, toastTimer = null;
+
+  /* ---------- helpers ---------- */
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function icon(name, size) {
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    [['width', size || 18], ['height', size || 18], ['viewBox', '0 0 24 24'], ['fill', 'none'], ['stroke', 'currentColor'],
+     ['stroke-width', '1.8'], ['stroke-linecap', 'round'], ['stroke-linejoin', 'round'], ['aria-hidden', 'true']]
+      .forEach(function (a) { s.setAttribute(a[0], a[1]); });
+    s.innerHTML = Object.prototype.hasOwnProperty.call(ICON, name) ? ICON[name] : ICON.dot;
+    return s;
+  }
+  function fmt(n) { return (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function signed(n) { return (n < 0 ? '−' : '') + fmt(Math.abs(n)); }
+  function startOfWeek(offset) {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - ((d.getDay() - WEEK_STARTS_ON + 7) % 7) + offset * 7);
+    return d;
+  }
+  function dayKey(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function rangeLabel(start) {
+    var end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    var a = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    var b = end.getMonth() === start.getMonth() ? String(end.getDate()) : end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return a + ' – ' + b;
+  }
+  function envById(id) {
+    for (var i = 0; i < envList.length; i++) if (envList[i].id === id) return envList[i];
+    return null;
+  }
+  function spentFor(id) {
+    var s = 0;
+    expenses.forEach(function (x) { if (x.envelope_id === id) s += Number(x.amount) || 0; });
+    return s;
+  }
+  function showToast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 3200);
+  }
+  function showView(name) {
+    $('signin').hidden = name !== 'signin';
+    $('notice').hidden = name !== 'notice';
+    $('main').hidden = name !== 'main';
+  }
+  function notice(text, withSignout) {
+    $('notice-text').textContent = text;
+    $('notice-signout').hidden = !withSignout;
+    showView('notice');
+  }
+
+  /* ---------- rendering ---------- */
+  function render() {
+    var start = startOfWeek(weekOffset);
+    $('week-name').textContent = weekOffset === 0 ? 'This week' : (weekOffset === -1 ? 'Last week' : 'Week of ' + start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    var range = rangeLabel(start);
+    if (weekOffset === 0) {
+      var dayNum = Math.round((new Date().setHours(0, 0, 0, 0) - start.getTime()) / 86400000) + 1;
+      range += ' · Day ' + Math.min(7, Math.max(1, dayNum)) + ' of 7';
+    }
+    $('week-range').textContent = range;
+    $('next-week').disabled = weekOffset >= 0;
+    $('entries-title').textContent = weekOffset === 0 ? 'Spending this week' : 'Spending that week';
+    renderGrid();
+    renderEntries();
+  }
+
+  function renderGrid() {
+    var grid = $('grid');
+    grid.textContent = '';
+    var totalBudget = 0, totalSpent = 0;
+    if (!weekLoaded) {
+      grid.appendChild(el('div', 'empty', 'Loading your envelopes…'));
+    } else if (!envList.length) {
+      grid.appendChild(el('div', 'empty', 'No envelopes yet. Run the database setup in Supabase to add them.'));
+    } else {
+      envList.forEach(function (env) {
+        var budget = Number(env.weekly) || 0;
+        var spent = spentFor(env.id);
+        var left = budget - spent;
+        totalBudget += budget;
+        totalSpent += spent;
+
+        var b = el('button', 'card' + (WIDE[env.id] ? ' wide' : ''));
+        b.type = 'button';
+        b.setAttribute('aria-label', env.name + ': ' + signed(left) + ' EGP left of ' + fmt(budget) + '. Add spending');
+        var head = el('span', 'head');
+        var ic = el('span', 'icon');
+        ic.appendChild(icon(String(env.icon || env.id)));
+        head.appendChild(ic);
+        var names = el('span', 'names');
+        names.appendChild(el('b', null, String(env.name)));
+        if (env.name_ar) names.appendChild(el('span', null, String(env.name_ar)));
+        head.appendChild(names);
+        b.appendChild(head);
+
+        var amt = el('span', 'amt');
+        amt.appendChild(el('b', left < 0 ? 'over' : null, signed(left)));
+        amt.appendChild(el('span', null, 'left of ' + fmt(budget)));
+        b.appendChild(amt);
+
+        var bar = el('span', 'bar' + (left < budget * 0.2 ? ' warn' : ''));
+        var fill = el('span');
+        fill.style.width = (budget > 0 ? Math.min(100, Math.max(0, spent / budget * 100)) : 0).toFixed(1) + '%';
+        bar.appendChild(fill);
+        b.appendChild(bar);
+
+        var latest = null;
+        expenses.forEach(function (x) { if (x.envelope_id === env.id && !latest) latest = x; }); // expenses are newest first
+        b.appendChild(el('span', 'last', latest ? 'Last: ' + (latest.note || fmt(latest.amount) + ' EGP') : 'Nothing spent yet'));
+
+        b.addEventListener('click', function () { openSheet(env.id, b); });
+        grid.appendChild(b);
+      });
+    }
+    var totalLeft = totalBudget - totalSpent;
+    var tl = $('total-left');
+    tl.textContent = signed(totalLeft);
+    tl.className = totalLeft < 0 ? 'over' : '';
+    $('total-sub').textContent = weekLoaded ? 'Spent ' + fmt(totalSpent) + ' of ' + fmt(totalBudget) + (weekOffset === 0 ? ' this week' : ' that week') : 'Loading…';
+    var tb = $('total-bar');
+    tb.className = 'bar thick' + (totalBudget > 0 && totalLeft < totalBudget * 0.2 ? ' warn' : '');
+    tb.firstElementChild.style.width = (totalBudget > 0 ? Math.min(100, Math.max(0, totalSpent / totalBudget * 100)) : 0).toFixed(1) + '%';
+  }
+
+  function renderEntries() {
+    var box = $('entries');
+    box.textContent = '';
+    if (!weekLoaded) { box.appendChild(el('div', 'none', 'Loading…')); return; }
+    if (!expenses.length) { box.appendChild(el('div', 'none', 'Nothing added yet. Tap an envelope to add what you spent.')); return; }
+    expenses.forEach(function (x) {
+      var env = envById(x.envelope_id);
+      var envName = env ? String(env.name) : String(x.envelope_id);
+      var who = x.spent_by === myId ? 'You' : (members[x.spent_by] || 'Someone');
+      var d = new Date(x.spent_at);
+      var when = isNaN(d) ? '' : d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+      var row = el('div', 'entry');
+      var main = el('div', 'main');
+      main.appendChild(el('b', null, x.note || envName));
+      main.appendChild(el('span', null, envName + ' · ' + who + (when ? ' · ' + when : '')));
+      row.appendChild(main);
+      row.appendChild(el('span', 'value', fmt(x.amount)));
+
+      var del = el('button', 'delbtn' + (pendingDelete === x.id ? ' confirm' : ''));
+      del.type = 'button';
+      if (pendingDelete === x.id) {
+        del.textContent = 'Delete?';
+        del.setAttribute('aria-label', 'Tap again to delete this entry');
+      } else {
+        del.appendChild(icon('trash', 18));
+        del.setAttribute('aria-label', 'Delete entry');
+      }
+      del.addEventListener('click', function () { onDelete(x.id); });
+      row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+
+  /* ---------- data ---------- */
+  async function loadHousehold() {
+    var res = await Promise.all([
+      sb.from('members').select('user_id, display_name'),
+      sb.from('envelopes').select('id, name, name_ar, weekly, icon, sort').order('sort')
+    ]);
+    if (res[0].error || res[1].error) throw (res[0].error || res[1].error);
+    members = {};
+    res[0].data.forEach(function (m) { members[m.user_id] = String(m.display_name || ''); });
+    envList = res[1].data || [];
+    return !!members[myId];
+  }
+
+  async function loadWeek() {
+    var req = ++weekReq;
+    var wk = dayKey(startOfWeek(weekOffset));
+    var r = await sb.from('expenses')
+      .select('id, envelope_id, amount, note, spent_by, spent_at')
+      .eq('week_start', wk)
+      .order('spent_at', { ascending: false });
+    if (req !== weekReq) return; // a newer load started
+    if (r.error) { showToast('Couldn’t load spending. Check your connection.'); return; }
+    expenses = (r.data || []).map(function (x) {
+      return { id: x.id, envelope_id: String(x.envelope_id), amount: Number(x.amount) || 0, note: x.note ? String(x.note) : '', spent_by: x.spent_by, spent_at: x.spent_at };
+    });
+    weekLoaded = true;
+    render();
+    if (sel) updateSheet();
+  }
+
+  function changeWeek(delta) {
+    weekOffset += delta;
+    if (weekOffset > 0) weekOffset = 0;
+    weekLoaded = false;
+    pendingDelete = null;
+    render();
+    loadWeek();
+  }
+
+  function subscribeLive() {
+    if (channel) return;
+    channel = sb.channel('expenses-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, function () { loadWeek(); })
+      .subscribe();
+  }
+
+  async function onSession(session) {
+    var uid = session && session.user ? session.user.id : null;
+    if (uid === loadedFor && uid) return;
+    loadedFor = uid;
+    myId = uid;
+    if (!uid) {
+      if (channel) { sb.removeChannel(channel); channel = null; }
+      showView('signin');
+      return;
+    }
+    notice('Loading…', false);
+    try {
+      var ok = await loadHousehold();
+      if (!ok) { notice('This account isn’t part of the household yet. Ask Mohamed to add it in Supabase.', true); return; }
+    } catch (e) {
+      notice('Couldn’t reach the database. Check your connection and reopen the app.', true);
+      return;
+    }
+    $('signed-as').textContent = 'Signed in as ' + (members[myId] || session.user.email || 'you');
+    showView('main');
+    weekLoaded = false;
+    render();
+    loadWeek();
+    subscribeLive();
+  }
+
+  /* ---------- delete ---------- */
+  function onDelete(id) {
+    if (pendingDelete !== id) {
+      pendingDelete = id;
+      clearTimeout(pendingTimer);
+      pendingTimer = setTimeout(function () { pendingDelete = null; renderEntries(); }, 4000);
+      renderEntries();
+      return;
+    }
+    pendingDelete = null;
+    clearTimeout(pendingTimer);
+    renderEntries();
+    sb.from('expenses').delete().eq('id', id).then(function (r) {
+      if (r.error) showToast('Couldn’t delete. Check your connection and try again.');
+      else { showToast('Entry deleted'); loadWeek(); }
+    });
+  }
+
+  /* ---------- add sheet ---------- */
+  function openSheet(id, from) {
+    sel = id;
+    amount = '';
+    $('note').value = '';
+    returnFocus = from || null;
+    updateSheet();
+    $('sheet').hidden = false;
+    document.body.style.overflow = 'hidden';
+    $('cancel').focus();
+  }
+  function closeSheet() {
+    $('sheet').hidden = true;
+    document.body.style.overflow = '';
+    sel = null;
+    if (returnFocus && document.body.contains(returnFocus)) returnFocus.focus();
+  }
+  function updateSheet() {
+    var env = envById(sel);
+    if (!env) return;
+    var left = (Number(env.weekly) || 0) - spentFor(env.id);
+    var n = parseFloat(amount) || 0;
+    var after = left - n;
+    $('sheet-name').textContent = String(env.name);
+    $('sheet-ar').textContent = env.name_ar ? String(env.name_ar) : '';
+    $('sheet-ctx').textContent = signed(left) + ' EGP left ' + (weekOffset === 0 ? 'this week' : 'in the week of ' + rangeLabel(startOfWeek(weekOffset)));
+    var a = $('amount');
+    a.textContent = amount === '' ? '0' : amount;
+    a.className = amount === '' ? 'placeholder' : '';
+    var af = $('after');
+    if (n > 0 && after < 0) { af.textContent = 'Over this envelope by ' + fmt(-after) + ' EGP'; af.className = 'after over'; }
+    else { af.textContent = n > 0 ? 'Leaves ' + fmt(after) + ' EGP' : ''; af.className = 'after'; }
+    var s = $('save');
+    s.textContent = saving ? 'Saving…' : 'Save to ' + String(env.name);
+    s.disabled = saving || !(n > 0);
+  }
+  function press(k) {
+    var a = amount;
+    if (k === 'del') a = a.slice(0, -1);
+    else if (k === '.') {
+      if (a.indexOf('.') !== -1) return;
+      a = a === '' ? '0.' : a + '.';
+    } else {
+      var dot = a.indexOf('.');
+      if (dot !== -1 && a.length - dot > 2) return;
+      if (a.replace('.', '').length >= 7) return;
+      a = a === '0' ? k : a + k;
+    }
+    amount = a;
+    updateSheet();
+  }
+  async function save() {
+    var n = parseFloat(amount);
+    if (!(n > 0) || saving || !sel) return;
+    var env = envById(sel);
+    saving = true;
+    updateSheet();
+    var row = {
+      envelope_id: sel,
+      amount: Math.round(n * 100) / 100,
+      note: $('note').value.trim().slice(0, 120),
+      week_start: dayKey(startOfWeek(weekOffset))
+    };
+    var r = await sb.from('expenses').insert(row);
+    saving = false;
+    if (r.error) {
+      updateSheet();
+      showToast('Couldn’t save. Check your connection and try again.');
+      return;
+    }
+    closeSheet();
+    showToast('Saved ' + fmt(row.amount) + ' EGP to ' + (env ? env.name : 'envelope'));
+    loadWeek();
+  }
+
+  /* ---------- events ---------- */
+  $('keys').addEventListener('click', function (ev) {
+    var b = ev.target.closest('.key');
+    if (b) press(b.getAttribute('data-k'));
+  });
+  $('cancel').addEventListener('click', closeSheet);
+  $('save').addEventListener('click', save);
+  $('sheet').addEventListener('keydown', function (ev) {
+    if (ev.target === $('note')) {
+      if (ev.key === 'Enter') { ev.preventDefault(); save(); }
+      return;
+    }
+    if (/^[0-9]$/.test(ev.key)) { press(ev.key); ev.preventDefault(); }
+    else if (ev.key === '.') { press('.'); ev.preventDefault(); }
+    else if (ev.key === 'Backspace') { press('del'); ev.preventDefault(); }
+    else if (ev.key === 'Escape') { closeSheet(); }
+  });
+  $('prev-week').addEventListener('click', function () { changeWeek(-1); });
+  $('next-week').addEventListener('click', function () { changeWeek(1); });
+  $('signout').addEventListener('click', function () { sb.auth.signOut(); });
+  $('notice-signout').addEventListener('click', function () { sb.auth.signOut(); });
+
+  $('signin').addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    var email = $('email').value.trim();
+    var password = $('password').value;
+    var err = $('signin-error');
+    if (!email || !password) { err.textContent = 'Enter your email and password.'; return; }
+    err.textContent = '';
+    $('signin-btn').disabled = true;
+    $('signin-btn').textContent = 'Signing in…';
+    var r = await sb.auth.signInWithPassword({ email: email, password: password });
+    $('signin-btn').disabled = false;
+    $('signin-btn').textContent = 'Sign in';
+    if (r.error) err.textContent = r.error.status === 400 ? 'Wrong email or password.' : 'Couldn’t sign in. Check your connection and try again.';
+    else $('password').value = '';
+  });
+
+  // iPhone pauses the live connection in the background, so refresh when the app comes back.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && myId && !$('main').hidden) loadWeek();
+  });
+
+  /* ---------- start ---------- */
+  var cfg = window.FE_CONFIG || {};
+  if (!window.supabase || !cfg.url || cfg.url.indexOf('YOUR-') !== -1 || !cfg.anonKey || cfg.anonKey.indexOf('YOUR-') !== -1) {
+    notice(window.supabase ? 'Almost ready: add your Supabase project URL and key to config.js.' : 'Couldn’t load the app. Check your connection and reload.', false);
+    return;
+  }
+  sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+  sb.auth.getSession().then(function (r) { onSession(r.data.session); });
+  sb.auth.onAuthStateChange(function (_event, session) { setTimeout(function () { onSession(session); }, 0); });
+})();
+</script>
+</body>
+</html>
