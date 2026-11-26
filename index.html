@@ -236,10 +236,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     home: '<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/>',
     bills: '<path d="M13 3L5 13h6l-1 8 8-10h-6z"/>',
     emergency: '<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/>',
+    unknown: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/>',
     dot: '<circle cx="12" cy="12" r="4"/>',
     trash: '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>'
   };
-  var WIDE = { food: true, emergency: true };
+  var WIDE = { food: true };
   var WEEK_STARTS_ON = 6; // Saturday
 
   var $ = function (id) { return document.getElementById(id); };
@@ -341,9 +342,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
         totalBudget += budget;
         totalSpent += spent;
 
+        var open = budget <= 0; // no set limit, e.g. Unknown
         var b = el('button', 'card' + (WIDE[env.id] ? ' wide' : ''));
         b.type = 'button';
-        b.setAttribute('aria-label', env.name + ': ' + signed(left) + ' EGP left of ' + fmt(budget) + '. Add spending');
+        b.setAttribute('aria-label', env.name + ': ' + (open ? fmt(spent) + ' EGP spent, no set budget' : signed(left) + ' EGP left of ' + fmt(budget)) + '. Add spending');
         var head = el('span', 'head');
         var ic = el('span', 'icon');
         ic.appendChild(icon(String(env.icon || env.id)));
@@ -355,15 +357,22 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
         b.appendChild(head);
 
         var amt = el('span', 'amt');
-        amt.appendChild(el('b', left < 0 ? 'over' : null, signed(left)));
-        amt.appendChild(el('span', null, 'left of ' + fmt(budget)));
+        if (open) {
+          amt.appendChild(el('b', null, fmt(spent)));
+          amt.appendChild(el('span', null, 'spent · no set budget'));
+        } else {
+          amt.appendChild(el('b', left < 0 ? 'over' : null, signed(left)));
+          amt.appendChild(el('span', null, 'left of ' + fmt(budget)));
+        }
         b.appendChild(amt);
 
-        var bar = el('span', 'bar' + (left < budget * 0.2 ? ' warn' : ''));
-        var fill = el('span');
-        fill.style.width = (budget > 0 ? Math.min(100, Math.max(0, spent / budget * 100)) : 0).toFixed(1) + '%';
-        bar.appendChild(fill);
-        b.appendChild(bar);
+        if (!open) {
+          var bar = el('span', 'bar' + (left < budget * 0.2 ? ' warn' : ''));
+          var fill = el('span');
+          fill.style.width = Math.min(100, Math.max(0, spent / budget * 100)).toFixed(1) + '%';
+          bar.appendChild(fill);
+          b.appendChild(bar);
+        }
 
         var latest = null;
         expenses.forEach(function (x) { if (x.envelope_id === env.id && !latest) latest = x; }); // expenses are newest first
@@ -527,17 +536,21 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   function updateSheet() {
     var env = envById(sel);
     if (!env) return;
-    var left = (Number(env.weekly) || 0) - spentFor(env.id);
+    var budget = Number(env.weekly) || 0;
+    var open = budget <= 0;
+    var left = budget - spentFor(env.id);
     var n = parseFloat(amount) || 0;
     var after = left - n;
+    var when = weekOffset === 0 ? 'this week' : 'in the week of ' + rangeLabel(startOfWeek(weekOffset));
     $('sheet-name').textContent = String(env.name);
     $('sheet-ar').textContent = env.name_ar ? String(env.name_ar) : '';
-    $('sheet-ctx').textContent = signed(left) + ' EGP left ' + (weekOffset === 0 ? 'this week' : 'in the week of ' + rangeLabel(startOfWeek(weekOffset)));
+    $('sheet-ctx').textContent = open ? fmt(spentFor(env.id)) + ' EGP spent ' + when + ' · no set budget' : signed(left) + ' EGP left ' + when;
     var a = $('amount');
     a.textContent = amount === '' ? '0' : amount;
     a.className = amount === '' ? 'placeholder' : '';
     var af = $('after');
-    if (n > 0 && after < 0) { af.textContent = 'Over this envelope by ' + fmt(-after) + ' EGP'; af.className = 'after over'; }
+    if (open) { af.textContent = n > 0 ? 'You can move it to the right envelope later' : ''; af.className = 'after'; }
+    else if (n > 0 && after < 0) { af.textContent = 'Over this envelope by ' + fmt(-after) + ' EGP'; af.className = 'after over'; }
     else { af.textContent = n > 0 ? 'Leaves ' + fmt(after) + ' EGP' : ''; af.className = 'after'; }
     var s = $('save');
     s.textContent = saving ? 'Saving…' : 'Save to ' + String(env.name);
