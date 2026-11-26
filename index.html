@@ -110,7 +110,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .sheet-title b { font-size: 17px; font-weight: 600; }
 .sheet-title span { font-size: 12px; color: var(--muted); }
 .spacer { min-width: 72px; }
-.display { flex: 1; min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.display { flex: 1; min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
 .display .ctx { font-size: 14px; color: var(--muted); }
 .display .num { display: flex; align-items: baseline; gap: 8px; }
 .display .num b { font-size: clamp(48px, 16vw, 68px); font-weight: 700; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
@@ -121,6 +121,15 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
 .field input { height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--fg); font: inherit; font-size: 16px; width: 100%; }
+.suggest { display: flex; flex-direction: column; gap: 6px; }
+.suggest-label { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 4px; margin-inline: -2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { display: flex; align-items: center; flex-shrink: 0; max-width: 260px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); overflow: hidden; }
+.chip.selected { border-color: var(--accent); background: var(--accent-soft); }
+.chip-text { border: none; background: transparent; height: 40px; padding: 0 2px 0 14px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 216px; cursor: pointer; }
+.chip-pin { border: none; background: transparent; width: 40px; height: 40px; display: grid; place-items: center; color: var(--muted); cursor: pointer; flex-shrink: 0; }
+.chip-pin.on { color: var(--accent); }
 .keys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .key { height: 56px; border: 1px solid var(--line); border-radius: 14px; background: var(--key); font-size: 26px; font-weight: 500; display: grid; place-items: center; cursor: pointer; font-variant-numeric: tabular-nums; }
 .key:active { background: var(--track); }
@@ -201,6 +210,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       <label for="note">Note</label>
       <input id="note" type="text" maxlength="120" placeholder="What was it for?" autocomplete="off">
     </div>
+    <div class="suggest" id="note-suggest" hidden></div>
     <div class="keys" id="keys">
       <button class="key" type="button" data-k="1">1</button>
       <button class="key" type="button" data-k="2">2</button>
@@ -237,6 +247,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     bills: '<path d="M13 3L5 13h6l-1 8 8-10h-6z"/>',
     emergency: '<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/>',
     unknown: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/>',
+    pin: '<path d="M9 3.5h6l-1 5.5 3 3V14H7v-2l3-3z"/><path d="M12 14v6.5"/>',
     dot: '<circle cx="12" cy="12" r="4"/>',
     trash: '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>'
   };
@@ -249,6 +260,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   var loadedFor = null, weekOffset = 0, weekLoaded = false, weekReq = 0, channel = null;
   var sel = null, amount = '', saving = false, returnFocus = null;
   var pendingDelete = null, pendingTimer = null, toastTimer = null;
+  var notePins = [], noteRecent = [], notesReq = 0, pinBusy = false;
 
   /* ---------- helpers ---------- */
   function el(tag, cls, text) {
@@ -516,11 +528,91 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     });
   }
 
+  /* ---------- note suggestions ---------- */
+  async function loadNotes(envId) {
+    var req = ++notesReq;
+    var res = await Promise.all([
+      sb.from('pinned_notes').select('id, note').eq('envelope_id', envId).order('created_at'),
+      sb.from('expenses').select('note').eq('envelope_id', envId).neq('note', '').order('spent_at', { ascending: false }).limit(80)
+    ]);
+    if (req !== notesReq || sel !== envId) return;
+    notePins = res[0].error ? [] : (res[0].data || []).map(function (p) { return { id: p.id, note: String(p.note) }; });
+    var pinned = {};
+    notePins.forEach(function (p) { pinned[p.note] = true; });
+    var seen = {};
+    noteRecent = [];
+    (res[1].error ? [] : res[1].data || []).forEach(function (r) {
+      var n = String(r.note || '').trim();
+      if (!n || seen[n] || pinned[n] || noteRecent.length >= 8) return;
+      seen[n] = true;
+      noteRecent.push(n);
+    });
+    renderNoteChips();
+  }
+
+  function noteChip(text, pin) {
+    var current = $('note').value.trim();
+    var chip = el('div', 'chip' + (current === text ? ' selected' : ''));
+    var pick = el('button', 'chip-text', text);
+    pick.type = 'button';
+    pick.setAttribute('aria-pressed', current === text ? 'true' : 'false');
+    pick.addEventListener('click', function () {
+      $('note').value = text;
+      renderNoteChips();
+    });
+    chip.appendChild(pick);
+    var tog = el('button', 'chip-pin' + (pin ? ' on' : ''));
+    tog.type = 'button';
+    tog.setAttribute('aria-label', (pin ? 'Unpin ' : 'Pin ') + text);
+    var ic = icon('pin', 18);
+    if (pin) ic.setAttribute('fill', 'currentColor');
+    tog.appendChild(ic);
+    tog.addEventListener('click', function () { togglePin(text, pin); });
+    chip.appendChild(tog);
+    return chip;
+  }
+
+  function renderNoteChips() {
+    var box = $('note-suggest');
+    box.textContent = '';
+    if (!notePins.length && !noteRecent.length) { box.hidden = true; return; }
+    box.hidden = false;
+    if (notePins.length) {
+      box.appendChild(el('span', 'suggest-label', 'Pinned'));
+      var row = el('div', 'chips');
+      notePins.forEach(function (p) { row.appendChild(noteChip(p.note, p)); });
+      box.appendChild(row);
+    }
+    if (noteRecent.length) {
+      box.appendChild(el('span', 'suggest-label', 'Recent'));
+      var row2 = el('div', 'chips');
+      noteRecent.forEach(function (n) { row2.appendChild(noteChip(n, null)); });
+      box.appendChild(row2);
+    }
+  }
+
+  async function togglePin(text, pin) {
+    if (pinBusy || !sel) return;
+    pinBusy = true;
+    var envId = sel;
+    var r = pin
+      ? await sb.from('pinned_notes').delete().eq('id', pin.id)
+      : await sb.from('pinned_notes').insert({ envelope_id: envId, note: text });
+    pinBusy = false;
+    if (r.error && r.error.code !== '23505') showToast(pin ? 'Couldn’t unpin. Try again.' : 'Couldn’t pin. Try again.');
+    else showToast(pin ? 'Unpinned' : 'Pinned');
+    if (sel === envId) loadNotes(envId);
+  }
+
   /* ---------- add sheet ---------- */
   function openSheet(id, from) {
     sel = id;
     amount = '';
     $('note').value = '';
+    notePins = [];
+    noteRecent = [];
+    renderNoteChips();
+    loadNotes(id);
     returnFocus = from || null;
     updateSheet();
     $('sheet').hidden = false;
@@ -601,6 +693,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     if (b) press(b.getAttribute('data-k'));
   });
   $('cancel').addEventListener('click', closeSheet);
+  $('note').addEventListener('input', function () { if (notePins.length || noteRecent.length) renderNoteChips(); });
   $('save').addEventListener('click', save);
   $('sheet').addEventListener('keydown', function (ev) {
     if (ev.target === $('note')) {
