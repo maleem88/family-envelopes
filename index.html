@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Family Envelopes</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -31,7 +31,7 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
 body {
   margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px;
   padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -204,6 +204,24 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
 .expr { flex-shrink: 0; max-width: 55%; height: 32px; padding: 0 10px; border: none; border-radius: 16px; background: var(--accent-soft); color: var(--fg); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .preview { font-size: 12px; color: var(--muted); padding-inline: 52px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .preview.bad { color: var(--warn); }
+.camb { width: 36px; height: 36px; flex-shrink: 0; border: none; border-radius: 50%; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+.attach { display: flex; align-items: center; gap: 10px; margin-inline: 52px; padding: 6px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); font-size: 13px; color: var(--muted); }
+.attach img { width: 44px; height: 44px; object-fit: cover; border-radius: 9px; }
+.attach span { flex: 1; min-width: 0; }
+.attach button { width: 32px; height: 32px; border: none; border-radius: 50%; background: var(--bg); color: var(--fg); font-size: 18px; cursor: pointer; }
+.bub .ph { display: block; width: 180px; max-width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; background: var(--bg); pointer-events: none; }
+.bub .ph.wait { display: grid; place-items: center; color: var(--muted); }
+.bub .t .need { color: var(--muted); font-weight: 500; }
+.viewer { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.92); display: flex; align-items: center; justify-content: center; padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px calc(env(safe-area-inset-bottom, 0px) + 12px); }
+.viewer img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+.viewer p { color: #fff; font-size: 14px; }
+.terms { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-inline: 52px; }
+.tchip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; height: 32px; padding: 0 9px 0 11px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); color: var(--fg); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
+.tchip .tl { font-weight: 500; color: var(--accent); max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tchip svg { color: var(--muted); flex-shrink: 0; }
+.tchip.on { border-color: var(--accent); background: var(--accent-soft); }
+.terms .top { color: var(--muted); font-size: 15px; font-weight: 600; }
+.terms .ttotal { border: none; background: transparent; padding: 0 4px; color: var(--muted); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
 .pad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .pad button { height: 50px; border: 1px solid var(--line); border-radius: 12px; background: var(--key); font-size: 22px; font-weight: 500; display: grid; place-items: center; cursor: pointer; font-variant-numeric: tabular-nums; }
 .pad button.op { background: var(--accent-soft); color: var(--accent); font-size: 24px; }
@@ -261,12 +279,16 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   <div class="composer" id="composer">
     <div class="comp-inner">
       <div class="preview" id="preview" hidden></div>
+      <div class="terms" id="terms" hidden></div>
+      <div class="attach" id="attach" hidden><img id="attach-img" alt=""><span id="attach-text">Receipt photo attached</span><button type="button" id="attach-x" aria-label="Remove photo">×</button></div>
       <div class="comp-row">
         <button class="modebtn" id="modebtn" type="button" aria-label="Show number pad"></button>
         <div class="cfield">
           <button class="expr" id="expr" type="button" hidden aria-label="Edit amount on number pad"></button>
           <label for="entry" class="sr-only">What did you spend?</label>
           <input id="entry" type="text" maxlength="160" autocomplete="off" enterkeyhint="send" placeholder="150 club entry">
+          <button class="camb" id="cambtn" type="button" aria-label="Add a receipt photo"></button>
+          <input id="photo-in" type="file" accept="image/*" hidden>
         </div>
         <button class="sendbtn" id="sendbtn" type="button" aria-label="Save entry"></button>
       </div>
@@ -279,6 +301,9 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
     </div>
   </div>
 </div>
+
+<!-- Receipt photo viewer -->
+<div class="viewer" id="viewer" hidden role="dialog" aria-label="Receipt photo"><p id="viewer-wait">Loading photo…</p><img id="viewer-img" alt="Receipt photo" hidden></div>
 
 <!-- Press-and-hold menu for an entry -->
 <div class="menu-back" id="menu" hidden>
@@ -396,12 +421,14 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
     send: '<path d="M12 19V5"/><path d="M5.5 11.5L12 5l6.5 6.5"/>',
     back: '<path d="M9 5h11v14H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/>',
     pin: '<path d="M9 3.5h6l-1 5.5 3 3V14H7v-2l3-3z"/><path d="M12 14v6.5"/>',
+    pen: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+    camera: '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1.5-2h5L16 7h2.5A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.5" r="3.5"/>',
     dot: '<circle cx="12" cy="12" r="4"/>',
     trash: '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>'
   };
   var WIDE = { food: true };
   var WEEK_STARTS_ON = 6; // Saturday
-  var APP_VERSION = '4.4'; // keep in step with version.json
+  var APP_VERSION = '4.6'; // keep in step with version.json
 
   var $ = function (id) { return document.getElementById(id); };
   var sb = null;
@@ -411,6 +438,8 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   var pendingDelete = null, pendingTimer = null, toastTimer = null;
   var notePins = [], noteRecent = [], notesReq = 0, pinBusy = false;
   var expr = '', padOpen = false, sending = false, scrollToEnd = false;
+  var photo = null, thumbs = {}, thumbReq = {}; // photo = { thumb, data } waiting to be sent
+  var tags = [], tagIdx = -1, mainNote = ''; // a note per number in a sum
 
   /* ---------- helpers ---------- */
   function el(tag, cls, text) {
@@ -552,9 +581,14 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
       var unsorted = x.envelope_id === 'unknown' || !env;
       var who = mine ? 'You' : (members[x.spent_by] || 'Someone');
       var time = isNaN(d) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      b.setAttribute('aria-label', fmt(x.amount) + ' EGP' + (x.note ? ', ' + x.note : '') + ', ' + (unsorted ? 'unsorted' : env.name) + ', ' + who + (time ? ' at ' + time : '') + '. Press and hold for options');
+      b.setAttribute('aria-label', (x.amount == null ? 'Receipt photo, amount not added yet' : fmt(x.amount) + ' EGP') + (x.note ? ', ' + x.note : '') + ', ' + (unsorted ? 'unsorted' : env.name) + ', ' + who + (time ? ' at ' + time : '') + '. Press and hold for options');
+      if (x.has_photo) {
+        if (thumbs[x.id]) { var im = el('img', 'ph'); im.alt = ''; im.src = thumbs[x.id]; b.appendChild(im); }
+        else { var ph = el('span', 'ph wait'); ph.appendChild(icon('camera', 26)); b.appendChild(ph); }
+      }
       var t = el('span', 't');
-      t.appendChild(el('b', null, fmt(x.amount)));
+      if (x.amount == null) t.appendChild(el('b', 'need', 'Receipt · amount to add'));
+      else t.appendChild(el('b', null, fmt(x.amount)));
       if (x.note) t.appendChild(document.createTextNode(' · ' + x.note));
       b.appendChild(t);
       var m = el('span', 'm');
@@ -612,6 +646,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
     b.addEventListener('click', function (ev) {
       if (suppressClick) { suppressClick = false; return; }
       if (ev.detail === 0) { openMenu(x); return; } // keyboard
+      if (x.has_photo) { openViewer(x.id); return; }
       if (!holdHintShown) { holdHintShown = true; showToast('Press and hold an entry for options'); }
     });
   }
@@ -630,7 +665,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   function openMenu(x) {
     menuEntry = x;
     var d = new Date(x.spent_at);
-    $('menu-title').textContent = fmt(x.amount) + ' EGP' + (x.note ? ' · ' + x.note : '');
+    $('menu-title').textContent = (x.amount == null ? 'Receipt' : fmt(x.amount) + ' EGP') + (x.note ? ' · ' + x.note : '');
     $('menu-sub').textContent = (x.spent_by === myId ? 'You' : (members[x.spent_by] || 'Someone')) +
       (isNaN(d) ? '' : ' · ' + d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
     $('menu-env-now').textContent = envLabel(x.envelope_id);
@@ -669,7 +704,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
     var x = menuEntry;
     if (a === 'edit') {
       menuPanel('edit');
-      $('edit-amount').value = String(x.amount);
+      $('edit-amount').value = x.amount == null ? '' : String(x.amount);
       $('edit-note').value = x.note || '';
       $('edit-amount').focus();
     } else if (a === 'env') {
@@ -756,10 +791,48 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   }
   function prettyExpr(s) { return s.replace(/-/g, ' − ').replace(/\+/g, ' + '); }
 
+  // The numbers in a pad sum, like "34+45-10" -> [{op:'',num:'34'}, {op:'+',num:'45'}, {op:'-',num:'10'}]
+  function exprTerms(s) {
+    var out = [], re = /([+\-]?)([0-9.]+)/g, m;
+    while ((m = re.exec(s))) out.push({ op: m[1], num: m[2], label: '' });
+    return out;
+  }
+  // One note for the whole sum: "bread 34 + milk 45", led by the main note when there is one.
+  function sumNote(terms, main) {
+    if (terms.length < 2 || !terms.some(function (t) { return t.label; })) return main;
+    var b = terms.map(function (t, i) {
+      var op = t.op === '-' ? (i ? ' − ' : '−') : (i ? ' + ' : '');
+      return op + (t.label ? t.label + ' ' : '') + t.num;
+    }).join('');
+    return main ? main + ': ' + b : b;
+  }
+  // Typed sums with a note per number: "34 bread + 45 milk".
+  function typedTerms(t) {
+    var bits = t.split(/\s*([+\-])\s*(?=\d|\.\d)/);
+    if (bits.length < 3) return null;
+    var terms = [];
+    for (var i = 0; i < bits.length; i += 2) {
+      var m = bits[i].match(/^\s*(\d+(?:\.\d+)?|\.\d+)\s*(.*)$/);
+      if (!m) return null;
+      terms.push({ op: i ? bits[i - 1] : '', num: m[1], label: m[2].trim() });
+    }
+    var labelled = terms.filter(function (x) { return x.label; });
+    // "150+85-20 supermarket" keeps its old meaning: one note for the whole sum.
+    if (!labelled.length || (labelled.length === 1 && terms[terms.length - 1].label)) return null;
+    return terms;
+  }
+  function mainText() { return tagIdx >= 0 ? mainNote : $('entry').value.trim(); }
+
   function parseEntry() {
-    var text = $('entry').value.trim();
-    if (expr) return { amount: evalExpr(expr), note: text };
+    var text = mainText();
+    if (expr) {
+      var terms = exprTerms(expr);
+      terms.forEach(function (x, i) { x.label = tags[i] || ''; });
+      return { amount: evalExpr(expr), note: sumNote(terms, text) };
+    }
     var t = latinDigits(text);
+    var tt = typedTerms(t);
+    if (tt) return { amount: evalExpr(tt.map(function (x) { return (x.op === '-' ? '-' : '+') + x.num; }).join('')), note: sumNote(tt, '') };
     var m = t.match(/^([0-9.]+(?:\s*[+\-]\s*[0-9.]+)*)\s*(.*)$/);
     if (m) return { amount: evalExpr(m[1]), note: m[2].trim() };
     var m2 = t.match(/(^|\s)(\d+(?:\.\d+)?)(?=\s|$)/);
@@ -773,7 +846,10 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   function updateComposer() {
     var hasOp = /[+\-]\d/.test(expr);
     var ex = $('expr');
-    ex.hidden = !expr;
+    var terms = expr ? exprTerms(expr) : [];
+    var showTerms = terms.length >= 2;
+    ex.hidden = !expr || showTerms;
+    renderTerms(showTerms ? terms : null);
     if (expr) {
       var v = evalExpr(expr);
       ex.textContent = prettyExpr(expr) + (hasOp && !isNaN(v) ? ' = ' + fmt(v) : '');
@@ -783,19 +859,71 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
     mb.appendChild(icon(padOpen ? 'keyboard' : 'calc', 22));
     mb.setAttribute('aria-label', padOpen ? 'Show keyboard' : 'Show number pad');
     $('pad').hidden = !padOpen;
-    $('entry').placeholder = expr ? 'What was it for?' : (padOpen ? 'Note (optional)' : '150 club entry');
+    $('entry').placeholder = tagIdx >= 0 && terms[tagIdx] ? 'Note for ' + terms[tagIdx].num
+      : expr ? (showTerms ? 'Note for all (optional)' : 'What was it for?') : (padOpen ? 'Note (optional)' : '150 club entry');
+    $('entry').setAttribute('enterkeyhint', tagIdx >= 0 ? 'next' : 'send');
 
     var p = parseEntry();
     var pv = $('preview');
-    var any = expr || $('entry').value.trim();
-    var ok = p.amount > 0;
+    var any = expr || mainText() || photo;
+    var ok = p.amount > 0 || (!!photo && !expr && isNaN(p.amount));
     if (!any) pv.hidden = true;
     else {
       pv.hidden = false;
       pv.className = 'preview' + (ok ? '' : ' bad');
-      pv.textContent = ok ? 'Saves ' + fmt(p.amount) + ' EGP' + (p.note ? ' · ' + p.note : '') : 'Add an amount: type it first, or use the number pad';
+      pv.textContent = !ok ? 'Add an amount: type it first, or use the number pad'
+        : (p.amount > 0 ? 'Saves ' + fmt(p.amount) + ' EGP' : 'Saves the receipt; the amount can be added later') + (photo && p.amount > 0 ? ' with the photo' : '') + (p.note ? ' · ' + p.note : '');
     }
     $('sendbtn').disabled = sending || !ok;
+    $('attach').hidden = !photo;
+    if (photo) $('attach-img').src = photo.thumb;
+  }
+
+  function renderTerms(terms) {
+    var box = $('terms');
+    box.hidden = !terms;
+    box.textContent = '';
+    if (!terms) return;
+    terms.forEach(function (t, i) {
+      if (t.op) box.appendChild(el('span', 'top', t.op === '-' ? '−' : '+'));
+      var b = el('button', 'tchip' + (i === tagIdx ? ' on' : ''));
+      b.type = 'button';
+      b.appendChild(document.createTextNode(t.num));
+      if (tags[i]) b.appendChild(el('span', 'tl', tags[i]));
+      b.appendChild(icon('pen', 14));
+      b.setAttribute('aria-label', 'Note for ' + t.num + (tags[i] ? ': ' + tags[i] : ''));
+      b.addEventListener('pointerdown', function (ev) { ev.preventDefault(); }); // keep the keyboard up
+      b.addEventListener('click', function () { startTag(i); });
+      box.appendChild(b);
+    });
+    var v = evalExpr(expr);
+    if (!isNaN(v)) {
+      var tot = el('button', 'ttotal', '= ' + fmt(v));
+      tot.type = 'button';
+      tot.setAttribute('aria-label', 'Edit amount on number pad');
+      tot.addEventListener('click', openPad);
+      box.appendChild(tot);
+    }
+  }
+  function startTag(i) {
+    if (tagIdx < 0) mainNote = $('entry').value.trim();
+    else tags[tagIdx] = $('entry').value.trim();
+    tagIdx = i;
+    $('entry').value = tags[i] || '';
+    padOpen = false;
+    updateComposer();
+    $('entry').focus();
+  }
+  function finishTag() {
+    if (tagIdx < 0) return;
+    tags[tagIdx] = $('entry').value.trim();
+    $('entry').value = mainNote;
+    tagIdx = -1;
+  }
+  function nextTag() {
+    var n = exprTerms(expr).length;
+    if (tagIdx + 1 < n) startTag(tagIdx + 1);
+    else { finishTag(); updateComposer(); }
   }
 
   function pressPad(k) {
@@ -816,34 +944,101 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
       if (k === '00' && (seg === '' || seg === '0')) return;
       expr = seg === '0' ? expr.slice(0, -1) + k : expr + k;
     }
+    var n = exprTerms(expr).length;
+    if (tags.length > n) tags.length = n;
     updateComposer();
   }
 
   function openPad() {
+    finishTag();
     padOpen = true;
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     updateComposer();
   }
 
   async function sendEntry() {
+    finishTag();
     var p = parseEntry();
-    if (!(p.amount > 0) || sending) { if (!(p.amount > 0)) showToast('Add an amount first'); return; }
+    var has = p.amount > 0;
+    if (sending) return;
+    if (!has && !(photo && !expr && isNaN(p.amount))) { showToast('Add an amount first'); return; }
+    var pic = photo;
     sending = true;
     updateComposer();
     var r = await sb.from('expenses').insert({
       envelope_id: 'unknown',
-      amount: p.amount,
+      amount: has ? p.amount : null,
       note: p.note.slice(0, 120),
       week_start: dayKey(startOfWeek(weekOffset))
-    });
+    }).select('id');
+    if (!r.error && pic) {
+      var id = r.data[0].id;
+      // Photo first, then flag the entry, so the other phone sees the photo when it reloads.
+      var r2 = await sb.from('photos').insert({ expense_id: id, thumb: pic.thumb, data: pic.data });
+      if (!r2.error) r2 = await sb.from('expenses').update({ has_photo: true }).eq('id', id);
+      if (r2.error) { await sb.from('expenses').delete().eq('id', id); r = r2; }
+      else thumbs[id] = pic.thumb;
+    }
     sending = false;
     if (r.error) { updateComposer(); showToast('Couldn’t save. Check your connection and try again.'); return; }
     expr = '';
+    tags = [];
+    photo = null;
     $('entry').value = '';
     updateComposer();
-    showToast('Saved ' + fmt(p.amount) + ' EGP');
+    showToast(has ? 'Saved ' + fmt(p.amount) + ' EGP' : 'Receipt saved');
     scrollToEnd = true;
     loadWeek();
+  }
+
+  /* ---------- receipt photos ---------- */
+  function shrink(file, max, quality) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * k);
+        c.height = Math.round(img.naturalHeight * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+      img.src = url;
+    });
+  }
+  async function pickPhoto(file) {
+    if (!file) return;
+    try {
+      var data = await shrink(file, 1600, 0.72);
+      if (data.length > 2900000) data = await shrink(file, 1200, 0.6);
+      photo = { data: data, thumb: await shrink(file, 360, 0.6) };
+    } catch (e) { showToast('Couldn’t read that photo. Try another one.'); return; }
+    updateComposer();
+  }
+  async function loadThumbs() {
+    var ids = expenses.filter(function (x) { return x.has_photo && !thumbs[x.id] && !thumbReq[x.id]; }).map(function (x) { return x.id; });
+    if (!ids.length) return;
+    ids.forEach(function (id) { thumbReq[id] = true; });
+    var r = await sb.from('photos').select('expense_id, thumb').in('expense_id', ids);
+    ids.forEach(function (id) { delete thumbReq[id]; });
+    if (r.error) return;
+    (r.data || []).forEach(function (p) { thumbs[p.expense_id] = p.thumb; });
+    renderChat();
+  }
+  async function openViewer(id) {
+    $('viewer').hidden = false;
+    $('viewer-img').hidden = true;
+    $('viewer-wait').hidden = false;
+    $('viewer-wait').textContent = 'Loading photo…';
+    var r = await sb.from('photos').select('data').eq('expense_id', id).maybeSingle();
+    if ($('viewer').hidden) return;
+    if (r.error || !r.data) { $('viewer-wait').textContent = 'Couldn’t load the photo.'; return; }
+    $('viewer-img').src = r.data.data;
+    $('viewer-img').hidden = false;
+    $('viewer-wait').hidden = true;
   }
 
   function renderGrid() {
@@ -963,17 +1158,18 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
     var req = ++weekReq;
     var wk = dayKey(startOfWeek(weekOffset));
     var r = await sb.from('expenses')
-      .select('id, envelope_id, amount, note, spent_by, spent_at')
+      .select('id, envelope_id, amount, note, spent_by, spent_at, has_photo')
       .eq('week_start', wk)
       .order('spent_at', { ascending: false });
     if (req !== weekReq) return; // a newer load started
     if (r.error) { showToast('Couldn’t load spending. Check your connection.'); return; }
     expenses = (r.data || []).map(function (x) {
-      return { id: x.id, envelope_id: String(x.envelope_id), amount: Number(x.amount) || 0, note: x.note ? String(x.note) : '', spent_by: x.spent_by, spent_at: x.spent_at };
+      return { id: x.id, envelope_id: String(x.envelope_id), amount: x.amount == null ? null : Number(x.amount) || 0, note: x.note ? String(x.note) : '', spent_by: x.spent_by, spent_at: x.spent_at, has_photo: !!x.has_photo };
     });
     weekLoaded = true;
     render();
     if (sel) updateSheet();
+    loadThumbs();
   }
 
   function changeWeek(delta) {
@@ -1279,9 +1475,21 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   });
   $('expr').addEventListener('click', openPad);
   $('entry').addEventListener('focus', function () { if (padOpen) { padOpen = false; updateComposer(); } });
-  $('entry').addEventListener('input', updateComposer);
-  $('entry').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); sendEntry(); } });
+  $('entry').addEventListener('input', function () {
+    if (tagIdx >= 0) tags[tagIdx] = $('entry').value.trim();
+    updateComposer();
+  });
+  $('entry').addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' || ev.isComposing) return;
+    ev.preventDefault();
+    if (tagIdx >= 0) nextTag(); else sendEntry();
+  });
   $('sendbtn').addEventListener('click', sendEntry);
+  $('cambtn').appendChild(icon('camera', 22));
+  $('cambtn').addEventListener('click', function () { $('photo-in').click(); });
+  $('photo-in').addEventListener('change', function () { var f = this.files && this.files[0]; this.value = ''; pickPhoto(f); });
+  $('attach-x').addEventListener('click', function () { photo = null; updateComposer(); });
+  $('viewer').addEventListener('click', function () { $('viewer').hidden = true; $('viewer-img').src = ''; });
   $('chat-prev').addEventListener('click', function () { scrollToEnd = true; changeWeek(-1); });
   $('chat-next').addEventListener('click', function () { scrollToEnd = true; changeWeek(1); });
   $('to-envelopes').addEventListener('click', function () { showView('main'); });
