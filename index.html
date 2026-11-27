@@ -157,6 +157,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
 .pillbtn { height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 14px; font-weight: 600; color: var(--accent); cursor: pointer; }
 .msgs { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 6px; padding-top: 12px; padding-bottom: var(--composer-h, 120px); }
 .day { align-self: center; font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 0 2px; }
+.day-total { color: var(--fg); font-variant-numeric: tabular-nums; }
 .bwrap { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .bwrap.mine { align-items: flex-end; }
 .bub { max-width: 82%; padding: 8px 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; gap: 5px; text-align: left; cursor: pointer; }
@@ -325,7 +326,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   <h2 class="section-title" id="entries-title">Spending this week</h2>
   <div class="entries" id="entries"><div class="none">Loading…</div></div>
 
-  <div class="foot"><span id="signed-as"></span><button class="linkbtn" id="signout" type="button">Sign out</button><span>· Version 4.2</span></div>
+  <div class="foot"><span id="signed-as"></span><button class="linkbtn" id="signout" type="button">Sign out</button><span>· Version 4.3</span></div>
 </div>
 
 <!-- Add spending -->
@@ -518,11 +519,22 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
         : 'Nothing was added that week.'));
       return;
     }
+    var dayTotals = {};
+    expenses.forEach(function (x) {
+      var d = new Date(x.spent_at);
+      if (!isNaN(d)) { var k = dayKey(d); dayTotals[k] = (dayTotals[k] || 0) + (Number(x.amount) || 0); }
+    });
     var lastDay = null;
     expenses.slice().reverse().forEach(function (x) {
       var d = new Date(x.spent_at);
       var dk = isNaN(d) ? '' : dayKey(d);
-      if (dk && dk !== lastDay) { box.appendChild(el('div', 'day', dayLabel(d))); lastDay = dk; }
+      if (dk && dk !== lastDay) {
+        var head = el('div', 'day');
+        head.appendChild(document.createTextNode(dayLabel(d) + ' · '));
+        head.appendChild(el('span', 'day-total', fmt(dayTotals[dk]) + ' EGP'));
+        box.appendChild(head);
+        lastDay = dk;
+      }
       var mine = x.spent_by === myId;
       var wrap = el('div', 'bwrap' + (mine ? ' mine' : ''));
       var b = el('button', 'bub');
