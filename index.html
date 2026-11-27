@@ -137,7 +137,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .primary { height: 56px; border: none; border-radius: 16px; background: var(--primary); color: var(--on-primary); font-size: 17px; font-weight: 600; cursor: pointer; width: 100%; }
 .primary:disabled { opacity: .35; cursor: default; }
 
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); z-index: 30;
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); z-index: 50;
   max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 14px; background: var(--primary); color: var(--on-primary);
   font-size: 14px; font-weight: 500; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
 @media (prefers-reduced-motion: reduce) { .card:active { transform: none; } }
@@ -167,7 +167,23 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
 .tag { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; }
 .tag.un { background: var(--warn-soft); color: var(--warn); }
 .tag.so { background: var(--bg); color: var(--accent); }
-.bub-del { height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--warn); font-size: 13px; font-weight: 600; cursor: pointer; }
+.bub { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; transition: transform .12s ease; }
+.bub.pressing { transform: scale(.96); }
+@media (prefers-reduced-motion: reduce) { .bub, .bub.pressing { transition: none; transform: none; } }
+.menu-back { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .38); display: flex; align-items: flex-end; justify-content: center; }
+.menu { width: 100%; max-width: 520px; max-height: 88vh; overflow-y: auto; background: var(--bg); border-radius: 20px 20px 0 0; display: flex; flex-direction: column; gap: 12px;
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.menu-head { display: flex; flex-direction: column; gap: 2px; padding-inline: 4px; }
+.menu-head b { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.menu-head span { font-size: 13px; color: var(--muted); }
+.menu-list { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.menu-list button { min-height: 50px; padding: 0 16px; border: none; border-top: 1px solid var(--line); background: transparent; font-size: 16px; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+.menu-list button:first-child { border-top: none; }
+.menu-list button .sub { font-size: 13px; color: var(--muted); }
+.menu-list button.on { color: var(--accent); font-weight: 600; }
+.menu-list .danger { color: var(--warn); }
+.menu-form { display: flex; flex-direction: column; gap: 12px; }
+.menu-cancel { height: 50px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); font-size: 16px; font-weight: 600; color: var(--accent); cursor: pointer; }
 .chat-empty { margin: 32px auto 0; max-width: 300px; text-align: center; color: var(--muted); line-height: 1.5; font-size: 14px; }
 .composer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; background: var(--bg); border-top: 1px solid var(--line);
   padding: 8px max(12px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
@@ -259,6 +275,32 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   </div>
 </div>
 
+<!-- Press-and-hold menu for an entry -->
+<div class="menu-back" id="menu" hidden>
+  <div class="menu" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+    <div class="menu-head"><b id="menu-title"></b><span id="menu-sub"></span></div>
+    <div class="menu-list" id="menu-main">
+      <button type="button" data-a="edit">Edit amount and note</button>
+      <button type="button" data-a="env">Change envelope <span class="sub" id="menu-env-now"></span></button>
+      <button type="button" data-a="date">Change date <span class="sub" id="menu-date-now"></span></button>
+      <button type="button" data-a="del" class="danger" id="menu-del">Delete entry</button>
+    </div>
+    <div class="menu-form" id="menu-edit" hidden>
+      <div class="field"><label for="edit-amount">Amount (EGP)</label><input id="edit-amount" type="text" inputmode="decimal" autocomplete="off"></div>
+      <div class="field"><label for="edit-note">Note</label><input id="edit-note" type="text" maxlength="120" autocomplete="off"></div>
+      <div class="error" id="edit-error" role="alert"></div>
+      <button class="primary" type="button" id="edit-save">Save changes</button>
+    </div>
+    <div class="menu-list" id="menu-env" hidden></div>
+    <div class="menu-form" id="menu-date" hidden>
+      <div class="field"><label for="edit-date">Date</label><input id="edit-date" type="date"></div>
+      <div class="error" id="date-error" role="alert"></div>
+      <button class="primary" type="button" id="date-save">Save date</button>
+    </div>
+    <button class="menu-cancel" type="button" id="menu-cancel">Cancel</button>
+  </div>
+</div>
+
 <!-- Envelopes view -->
 <div class="app" id="main" hidden>
   <div><button class="textbtn" id="to-chat" type="button">‹ Entries</button></div>
@@ -283,7 +325,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   <h2 class="section-title" id="entries-title">Spending this week</h2>
   <div class="entries" id="entries"><div class="none">Loading…</div></div>
 
-  <div class="foot"><span id="signed-as"></span><button class="linkbtn" id="signout" type="button">Sign out</button><span>· Version 4.1</span></div>
+  <div class="foot"><span id="signed-as"></span><button class="linkbtn" id="signout" type="button">Sign out</button><span>· Version 4.2</span></div>
 </div>
 
 <!-- Add spending -->
@@ -358,7 +400,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   var sel = null, amount = '', saving = false, returnFocus = null;
   var pendingDelete = null, pendingTimer = null, toastTimer = null;
   var notePins = [], noteRecent = [], notesReq = 0, pinBusy = false;
-  var expr = '', padOpen = false, selectedBubble = null, sending = false, scrollToEnd = false;
+  var expr = '', padOpen = false, sending = false, scrollToEnd = false;
 
   /* ---------- helpers ---------- */
   function el(tag, cls, text) {
@@ -489,7 +531,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
       var unsorted = x.envelope_id === 'unknown' || !env;
       var who = mine ? 'You' : (members[x.spent_by] || 'Someone');
       var time = isNaN(d) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      b.setAttribute('aria-label', fmt(x.amount) + ' EGP' + (x.note ? ', ' + x.note : '') + ', ' + (unsorted ? 'unsorted' : env.name) + ', ' + who + (time ? ' at ' + time : '') + '. Show options');
+      b.setAttribute('aria-label', fmt(x.amount) + ' EGP' + (x.note ? ', ' + x.note : '') + ', ' + (unsorted ? 'unsorted' : env.name) + ', ' + who + (time ? ' at ' + time : '') + '. Press and hold for options');
       var t = el('span', 't');
       t.appendChild(el('b', null, fmt(x.amount)));
       if (x.note) t.appendChild(document.createTextNode(' · ' + x.note));
@@ -498,17 +540,8 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
       m.appendChild(el('span', 'tag ' + (unsorted ? 'un' : 'so'), unsorted ? 'Unsorted' : String(env.name)));
       m.appendChild(el('span', null, (mine ? '' : who + ' · ') + time));
       b.appendChild(m);
-      b.addEventListener('click', function () {
-        selectedBubble = selectedBubble === x.id ? null : x.id;
-        renderChat();
-      });
+      attachHold(b, x);
       wrap.appendChild(b);
-      if (selectedBubble === x.id) {
-        var del = el('button', 'bub-del', 'Delete entry');
-        del.type = 'button';
-        del.addEventListener('click', function () { deleteEntry(x.id); });
-        wrap.appendChild(del);
-      }
       box.appendChild(wrap);
     });
     if (scrollToEnd) {
@@ -518,13 +551,167 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   }
 
   function deleteEntry(id) {
-    selectedBubble = null;
-    renderChat();
     sb.from('expenses').delete().eq('id', id).then(function (r) {
       if (r.error) showToast('Couldn’t delete. Check your connection and try again.');
       else { showToast('Entry deleted'); loadWeek(); }
     });
   }
+
+  /* ---------- press and hold: entry options ---------- */
+  var holdTimer = null, holdStart = null, suppressClick = false, holdHintShown = false, menuEntry = null, menuDelArmed = false;
+
+  function attachHold(b, x) {
+    function cancel() {
+      clearTimeout(holdTimer);
+      holdTimer = null;
+      holdStart = null;
+      b.classList.remove('pressing');
+    }
+    b.addEventListener('pointerdown', function (ev) {
+      if (ev.button) return;
+      holdStart = { x: ev.clientX, y: ev.clientY };
+      b.classList.add('pressing');
+      clearTimeout(holdTimer);
+      holdTimer = setTimeout(function () {
+        cancel();
+        suppressClick = true;
+        try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {}
+        openMenu(x);
+      }, 450);
+    });
+    b.addEventListener('pointermove', function (ev) {
+      if (holdStart && Math.abs(ev.clientX - holdStart.x) + Math.abs(ev.clientY - holdStart.y) > 10) cancel();
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) { b.addEventListener(t, cancel); });
+    b.addEventListener('contextmenu', function (ev) {
+      ev.preventDefault();
+      cancel();
+      if (!menuEntry) { suppressClick = true; openMenu(x); }
+    });
+    b.addEventListener('click', function (ev) {
+      if (suppressClick) { suppressClick = false; return; }
+      if (ev.detail === 0) { openMenu(x); return; } // keyboard
+      if (!holdHintShown) { holdHintShown = true; showToast('Press and hold an entry for options'); }
+    });
+  }
+
+  function weekStartOf(d) {
+    var x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    x.setDate(x.getDate() - ((x.getDay() - WEEK_STARTS_ON + 7) % 7));
+    return x;
+  }
+  function envLabel(id) {
+    var env = envById(id);
+    return (id === 'unknown' || !env) ? 'Unsorted' : String(env.name);
+  }
+
+  function openMenu(x) {
+    menuEntry = x;
+    var d = new Date(x.spent_at);
+    $('menu-title').textContent = fmt(x.amount) + ' EGP' + (x.note ? ' · ' + x.note : '');
+    $('menu-sub').textContent = (x.spent_by === myId ? 'You' : (members[x.spent_by] || 'Someone')) +
+      (isNaN(d) ? '' : ' · ' + d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
+    $('menu-env-now').textContent = envLabel(x.envelope_id);
+    $('menu-date-now').textContent = isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    menuPanel('main');
+    $('menu').hidden = false;
+    $('menu-main').querySelector('button').focus();
+  }
+  function closeMenu() {
+    $('menu').hidden = true;
+    menuEntry = null;
+  }
+  function menuPanel(name) {
+    ['main', 'edit', 'env', 'date'].forEach(function (n) { $('menu-' + n).hidden = n !== name; });
+    $('menu-cancel').textContent = name === 'main' ? 'Cancel' : 'Back';
+    menuDelArmed = false;
+    $('menu-del').textContent = 'Delete entry';
+    $('edit-error').textContent = '';
+    $('date-error').textContent = '';
+  }
+
+  async function updateEntry(patch, done) {
+    var id = menuEntry.id;
+    var r = await sb.from('expenses').update(patch).eq('id', id).select('id');
+    if (r.error || !r.data || !r.data.length) { showToast('Couldn’t save the change. Try again.'); return false; }
+    closeMenu();
+    showToast(done);
+    loadWeek();
+    return true;
+  }
+
+  $('menu-main').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button');
+    if (!b || !menuEntry) return;
+    var a = b.getAttribute('data-a');
+    var x = menuEntry;
+    if (a === 'edit') {
+      menuPanel('edit');
+      $('edit-amount').value = String(x.amount);
+      $('edit-note').value = x.note || '';
+      $('edit-amount').focus();
+    } else if (a === 'env') {
+      menuPanel('env');
+      var list = $('menu-env');
+      list.textContent = '';
+      var ordered = envList.filter(function (e) { return e.id !== 'unknown'; });
+      var unk = envById('unknown');
+      if (unk) ordered.push(unk);
+      ordered.forEach(function (e) {
+        var on = e.id === x.envelope_id;
+        var btn = el('button', on ? 'on' : null);
+        btn.type = 'button';
+        btn.appendChild(document.createTextNode(e.id === 'unknown' ? 'Unsorted' : String(e.name)));
+        btn.appendChild(el('span', 'sub', on ? 'Current' : (e.name_ar ? String(e.name_ar) : '')));
+        btn.addEventListener('click', function () {
+          if (on) { closeMenu(); return; }
+          updateEntry({ envelope_id: e.id }, 'Moved to ' + (e.id === 'unknown' ? 'Unsorted' : e.name));
+        });
+        list.appendChild(btn);
+      });
+      list.querySelector('button').focus();
+    } else if (a === 'date') {
+      menuPanel('date');
+      var d = new Date(x.spent_at);
+      $('edit-date').value = isNaN(d) ? dayKey(new Date()) : dayKey(d);
+      $('edit-date').max = dayKey(new Date());
+      $('edit-date').focus();
+    } else if (a === 'del') {
+      if (!menuDelArmed) { menuDelArmed = true; b.textContent = 'Tap again to delete'; return; }
+      var id = x.id;
+      closeMenu();
+      deleteEntry(id);
+    }
+  });
+
+  $('edit-save').addEventListener('click', function () {
+    if (!menuEntry) return;
+    var amt = evalExpr($('edit-amount').value);
+    if (!(amt > 0)) { $('edit-error').textContent = 'Enter an amount, like 150 or 100+50.'; return; }
+    updateEntry({ amount: amt, note: $('edit-note').value.trim().slice(0, 120) }, 'Entry updated');
+  });
+  $('edit-amount').addEventListener('input', function () { $('edit-error').textContent = ''; });
+
+  $('date-save').addEventListener('click', function () {
+    if (!menuEntry) return;
+    var v = $('edit-date').value;
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+    if (!m) { $('date-error').textContent = 'Pick a date.'; return; }
+    var old = new Date(menuEntry.spent_at);
+    var nd = new Date(+m[1], +m[2] - 1, +m[3], isNaN(old) ? 12 : old.getHours(), isNaN(old) ? 0 : old.getMinutes());
+    if (dayKey(nd) > dayKey(new Date())) { $('date-error').textContent = 'Pick today or an earlier date.'; return; }
+    var ws = weekStartOf(nd);
+    var moved = dayKey(ws) !== dayKey(startOfWeek(weekOffset));
+    updateEntry({ spent_at: nd.toISOString(), week_start: dayKey(ws) },
+      moved ? 'Moved to the week of ' + rangeLabel(ws) : 'Date changed');
+  });
+
+  $('menu-cancel').addEventListener('click', function () {
+    if ($('menu-main').hidden) menuPanel('main'); else closeMenu();
+  });
+  $('menu').addEventListener('click', function (ev) { if (ev.target === $('menu')) closeMenu(); });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !$('menu').hidden) closeMenu(); });
 
   /* ---------- composer: text or number pad ---------- */
   function latinDigits(s) {
