@@ -158,6 +158,10 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
 .msgs { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 6px; padding-top: 12px; padding-bottom: var(--composer-h, 120px); }
 .day { align-self: center; font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 0 2px; }
 .day-total { color: var(--fg); font-variant-numeric: tabular-nums; }
+.update { position: fixed; left: 0; right: 0; top: 0; z-index: 45; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+  background: var(--primary); color: var(--on-primary); font-size: 14px; font-weight: 500; }
+.update button { height: 36px; padding: 0 16px; border-radius: 10px; border: none; background: var(--on-primary); color: var(--primary); font-weight: 600; cursor: pointer; }
 .bwrap { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .bwrap.mine { align-items: flex-end; }
 .bub { max-width: 82%; padding: 8px 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; gap: 5px; text-align: left; cursor: pointer; }
@@ -326,7 +330,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   <h2 class="section-title" id="entries-title">Spending this week</h2>
   <div class="entries" id="entries"><div class="none">Loading…</div></div>
 
-  <div class="foot"><span id="signed-as"></span><button class="linkbtn" id="signout" type="button">Sign out</button><span>· Version 4.3</span></div>
+  <div class="foot"><span id="signed-as"></span><button class="linkbtn" id="signout" type="button">Sign out</button><span id="app-version">· Version</span></div>
 </div>
 
 <!-- Add spending -->
@@ -368,6 +372,10 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
 </div>
 
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="update" id="update" role="status" hidden>
+  <span>A new version of the app is ready.</span>
+  <button type="button" id="update-btn">Update</button>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
@@ -393,6 +401,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   };
   var WIDE = { food: true };
   var WEEK_STARTS_ON = 6; // Saturday
+  var APP_VERSION = '4.4'; // keep in step with version.json
 
   var $ = function (id) { return document.getElementById(id); };
   var sb = null;
@@ -1230,6 +1239,31 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   // iPhone pauses the live connection in the background, so refresh when the app comes back.
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible' && myId && (!$('main').hidden || !$('chat').hidden)) loadWeek();
+  });
+
+  /* ---------- updates: phones keep an old copy, so check for a newer one ---------- */
+  $('app-version').textContent = '· Version ' + APP_VERSION;
+  async function checkForUpdate() {
+    try {
+      var r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return;
+      var j = await r.json();
+      if (j && j.version && String(j.version) !== APP_VERSION) $('update').hidden = false;
+    } catch (e) { /* offline: try again next time */ }
+  }
+  $('update-btn').addEventListener('click', async function () {
+    $('update-btn').textContent = 'Updating…';
+    try {
+      await Promise.all([
+        fetch(location.pathname, { cache: 'reload' }),
+        fetch('config.js', { cache: 'reload' })
+      ]);
+    } catch (e) {}
+    location.reload();
+  });
+  checkForUpdate();
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') checkForUpdate();
   });
 
   /* ---------- chat wiring ---------- */
