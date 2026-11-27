@@ -177,9 +177,9 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
 .modebtn { border: 1px solid var(--line); background: var(--card); color: var(--fg); }
 .sendbtn { border: none; background: var(--primary); color: var(--on-primary); }
 .sendbtn:disabled { opacity: .35; cursor: default; }
-.field { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 6px 0 12px; border: 1px solid var(--line); border-radius: 22px; background: var(--card); }
-.field:focus-within { border-color: var(--accent); }
-.field input { flex: 1; min-width: 0; height: 42px; border: none; background: transparent; color: var(--fg); font: inherit; font-size: 16px; outline: none; }
+.cfield { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 6px 0 12px; border: 1px solid var(--line); border-radius: 22px; background: var(--card); }
+.cfield:focus-within { border-color: var(--accent); }
+.cfield input { flex: 1; min-width: 0; height: 42px; border: none; background: transparent; color: var(--fg); font: inherit; font-size: 16px; outline: none; }
 .expr { flex-shrink: 0; max-width: 55%; height: 32px; padding: 0 10px; border: none; border-radius: 16px; background: var(--accent-soft); color: var(--fg); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .preview { font-size: 12px; color: var(--muted); padding-inline: 52px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .preview.bad { color: var(--warn); }
@@ -242,7 +242,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
       <div class="preview" id="preview" hidden></div>
       <div class="comp-row">
         <button class="modebtn" id="modebtn" type="button" aria-label="Show number pad"></button>
-        <div class="field">
+        <div class="cfield">
           <button class="expr" id="expr" type="button" hidden aria-label="Edit amount on number pad"></button>
           <label for="entry" class="sr-only">What did you spend?</label>
           <input id="entry" type="text" maxlength="160" autocomplete="off" enterkeyhint="send" placeholder="150 club entry">
@@ -283,7 +283,7 @@ body.chatting::before { content: ""; position: fixed; inset: 0 0 auto; height: e
   <h2 class="section-title" id="entries-title">Spending this week</h2>
   <div class="entries" id="entries"><div class="none">Loading…</div></div>
 
-  <div class="foot"><span id="signed-as"></span><button class="linkbtn" id="signout" type="button">Sign out</button><span>· Version 4</span></div>
+  <div class="foot"><span id="signed-as"></span><button class="linkbtn" id="signout" type="button">Sign out</button><span>· Version 4.1</span></div>
 </div>
 
 <!-- Add spending -->
